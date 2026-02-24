@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, ReactNode } from 'react';
 import axios from 'axios';
 import { useEffect } from 'react';
 import { toast } from '@/components/ui/sonner';
+import { set } from 'date-fns';
 // Define the shape of your context data here
 export interface Dustbin {
   _id: string;
@@ -43,7 +44,7 @@ type AppContextType = {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-    const [token, settoken] = useState(true)
+    const [token, settoken] = useState(false)
     const [location, setLocation] = useState<{
   lat: number;
   lng: number;
@@ -83,7 +84,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 };
   const login=async (email:string,password:string)=>{
     try{
-       settoken(true);
+        const {data} = await axios.post(`${API_URL}/api/auth/login`, { email, password },{withCredentials: true});
+        if (data.status === 'success') {
+            console.log("Login successful:", data);
+            settoken(true)
+            setUser(data.data.user);
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+        }
        console.log(token)
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Login failed');
@@ -121,15 +129,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     setError("");
     try {
-      const token = localStorage.getItem('token');
       const res = await axios.post(`${API_URL}/api/dustbins/add`, form, {
+        withCredentials: true,
         headers: {
-          'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'multipart/form-data',
-        },
-      });
-      if (res.data?.data) setDustbins(prev => [res.data.data, ...prev]);
-      return res.data;
+      }});
+      if (res.data?.data){
+        setDustbins(prev => [res.data.data, ...prev]);
+        return res.data;
+      } else{
+        console.log(res.data)
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to add dustbin');
       return { status: 'error', message: error };
