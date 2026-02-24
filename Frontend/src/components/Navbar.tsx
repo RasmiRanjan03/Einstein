@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
+import { useAppContext } from "@/context/AppContext";
 
 const navLinks = [
   { label: "Features", href: "#features" },
@@ -11,6 +12,8 @@ const navLinks = [
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const { user } = useAppContext();
+  if (!user) return null;
 
   return (
     <motion.nav
@@ -41,6 +44,20 @@ export default function Navbar() {
           >
             Dashboard
           </Link>
+          <Link
+              to="/signup"
+             
+              className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold text-center"
+            >
+              Sign Up
+            </Link>
+            <Link
+              to="/signin"
+     
+              className="px-5 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-semibold text-center"
+            >
+              Sign In
+            </Link>
         </div>
 
         {/* Mobile */}
@@ -73,6 +90,7 @@ export default function Navbar() {
             >
               Dashboard
             </Link>
+            
           </div>
         </motion.div>
       )}

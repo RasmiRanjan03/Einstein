@@ -69,16 +69,10 @@ const Landing = () => {
             </p>
             <div className="flex flex-wrap gap-4">
               <Link
-                to="/dashboard"
+                to="/signin"
                 className="px-8 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-opacity flex items-center gap-2"
               >
                 Get Started <ArrowRight className="w-4 h-4" />
-              </Link>
-              <Link
-                to="/dashboard"
-                className="px-8 py-3.5 rounded-xl glass text-foreground font-semibold hover:bg-muted/30 transition-colors"
-              >
-                View Dashboard
               </Link>
             </div>
           </motion.div>
