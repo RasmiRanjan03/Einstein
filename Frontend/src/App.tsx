@@ -6,7 +6,6 @@ import HealthRisk from "./pages/HealthRisk";
 import Environment from "./pages/Environment";
 import CarbonFootprint from "./pages/CarbonFootprint";
 import DustbinLocator from "./pages/DustbinLocator";
-import HospitalLocator from "./pages/HospitalLocator";
 import Prescription from "./pages/Prescription";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -29,7 +28,6 @@ const App = () => {
       <Route path="/environment" element={token ? <Environment /> : <Navigate to="/signin" />} />
       <Route path="/carbon" element={token ? <CarbonFootprint /> : <Navigate to="/signin" />} />
       <Route path="/dustbin" element={token ? <DustbinLocator /> : <Navigate to="/signin" />} />
-      <Route path="/hospital" element={token ? <HospitalLocator /> : <Navigate to="/signin" />} />
       <Route path="/prescription" element={token ? <Prescription /> : <Navigate to="/signin" />} />
       <Route path="/profile" element={token ? <Profile /> : <Navigate to="/signin" />} />
 
