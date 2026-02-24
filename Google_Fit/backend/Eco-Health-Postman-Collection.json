@@ -1,0 +1,409 @@
+{
+  "info": {
+    "name": "Eco-Health AI Backend API",
+    "description": "Complete API documentation with Google Fit OAuth integration",
+    "version": "1.0.0",
+    "contact": {
+      "email": "support@ecohealth.ai"
+    }
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Sign Up",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.globals.set('token', pm.response.json().token);",
+                  "    pm.globals.set('userId', pm.response.json().user.id);",
+                  "    pm.test('User registered successfully', function() {",
+                  "        pm.expect(pm.response.code).to.equal(201);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"name\\\": \\\"John Doe\\\",\\n  \\\"email\\\": \\\"john@example.com\\\",\\n  \\\"password\\\": \\\"password123\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{BASEURL}}/api/user/signup",
+              "host": ["{{BASEURL}}"],
+              "path": ["api", "user", "signup"]
+            }
+          }
+        },
+        {
+          "name": "Sign In",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.globals.set('token', pm.response.json().token);",
+                  "    pm.globals.set('userId', pm.response.json().id);",
+                  "    pm.test('User signed in successfully', function() {",
+                  "        pm.expect(pm.response.code).to.equal(200);",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"email\\\": \\\"john@example.com\\\",\\n  \\\"password\\\": \\\"password123\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{BASEURL}}/api/user/signin",
+              "host": ["{{BASEURL}}"],
+              "path": ["api", "user", "signin"]
+            }
+          }
+        },
+        {
+          "name": "Check Auth Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASEURL}}/api/user/check-auth",
+              "host": ["{{BASEURL}}"],
+              "path": ["api", "user", "check-auth"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User (Me)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASEURL}}/api/user/me",
+              "host": ["{{BASEURL}}"],
+              "path": ["api", "user", "me"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASEURL}}/api/user/logout",
+              "host": ["{{BASEURL}}"],
+              "path": ["api", "user", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Profile",
+      "item": [
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n  \\\"age\\\": 25,\\n  \\\"height\\\": 180,\\n  \\\"weight\\\": 75,\\n  \\\"lat\\\": 40.7128,\\n  \\\"lon\\\": -74.0060\\n}"
+            },
+            "url": {
+              "raw": "{{BASEURL}}/api/user/update-profile",
+              "host": ["{{BASEURL}}"],
+              "path": ["api", "user", "update-profile"]
+            }
+          }
+        },
+        {
+          "name": "Get Health Recommendation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASEURL}}/api/user/health-recommendation?lat=40.7128&lon=-74.0060",
+              "host": ["{{BASEURL}}"],
+              "path": ["api", "user", "health-recommendation"],
+              "query": [
+                {
+                  "key": "lat",
+                  "value": "40.7128"
+                },
+                {
+                  "key": "lon",
+                  "value": "-74.0060"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Google Fit OAuth",
+      "item": [
+        {
+          "name": "Step 1: Get Authorization URL",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const authUrl = pm.response.json().url;",
+                  "    pm.globals.set('googleAuthUrl', authUrl);",
+                  "    pm.test('Authorization URL generated', function() {",
+                  "        pm.expect(authUrl).to.include('accounts.google.com');",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASEURL}}/api/googlefit/authorize",
+              "host": ["{{BASEURL}}"],
+              "path": ["api", "googlefit", "authorize"]
+            }
+          }
+        },
+        {
+          "name": "Step 2: Open Browser & Authorize (Manual)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&scope=https://www.googleapis.com/auth/fitness.activity.read&client_id={{GOOGLE_CLIENT_ID}}&redirect_uri={{GOOGLE_REDIRECT_URI}}&response_type=code&state={{userId}}",
+              "protocol": "https",
+              "host": ["accounts.google.com"],
+              "path": ["o", "oauth2", "v2", "auth"]
+            }
+          }
+        },
+        {
+          "name": "Check Google Fit Connection Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASEURL}}/api/googlefit/status",
+              "host": ["{{BASEURL}}"],
+              "path": ["api", "googlefit", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Google Fit Data - Fitness",
+      "item": [
+        {
+          "name": "Get Steps (Today)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASEURL}}/api/googlefit/steps",
+              "host": ["{{BASEURL}}"],
+              "path": ["api", "googlefit", "steps"]
+            }
+          }
+        },
+        {
+          "name": "Get Heart Rate (Today)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASEURL}}/api/googlefit/heart-rate",
+              "host": ["{{BASEURL}}"],
+              "path": ["api", "googlefit", "heart-rate"]
+            }
+          }
+        },
+        {
+          "name": "Get Body Metrics (Last 7 Days)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASEURL}}/api/googlefit/body-metrics",
+              "host": ["{{BASEURL}}"],
+              "path": ["api", "googlefit", "body-metrics"]
+            }
+          }
+        },
+        {
+          "name": "Get Sleep Data (Last 7 Days)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASEURL}}/api/googlefit/sleep",
+              "host": ["{{BASEURL}}"],
+              "path": ["api", "googlefit", "sleep"]
+            }
+          }
+        },
+        {
+          "name": "Get Fitness Summary (Today)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASEURL}}/api/googlefit/summary",
+              "host": ["{{BASEURL}}"],
+              "path": ["api", "googlefit", "summary"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Google Fit Management",
+      "item": [
+        {
+          "name": "Disconnect Google Fit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Cookie",
+                "value": "token={{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{BASEURL}}/api/googlefit/disconnect",
+              "host": ["{{BASEURL}}"],
+              "path": ["api", "googlefit", "disconnect"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "BASEURL",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "GOOGLE_CLIENT_ID",
+      "value": "177627492018-mhfm67rmtbqf2ul4gcvk3rrdenljd38n.apps.googleusercontent.com",
+      "type": "string"
+    },
+    {
+      "key": "GOOGLE_REDIRECT_URI",
+      "value": "http://localhost:5000/api/googlefit/callback",
+      "type": "string"
+    },
+    {
+      "key": "googleAuthUrl",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
