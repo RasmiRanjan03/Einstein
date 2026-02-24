@@ -82,6 +82,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   );
 };
+    const checkAuth = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/api/users/checkauth`, { withCredentials: true });
+        if (res.data.status === 'success') {
+            settoken(true)
+            setUser(res.data.data.user);
+        } else {
+            settoken(false)
+            setUser(null);
+        }} catch (err) {
+      settoken(false)
+      setUser(null);
+    }}
   const login=async (email:string,password:string)=>{
     try{
         const {data} = await axios.post(`${API_URL}/api/auth/login`, { email, password },{withCredentials: true});
@@ -155,6 +168,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 useEffect(() => {
   getCurrentLocation();
 }, []);
+  useEffect(() => {
+    checkAuth();
+  }, [token]);
   // Keep user in sync with localStorage
   useEffect(() => {
     if (user) {
