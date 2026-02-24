@@ -15,29 +15,31 @@ import {
   getRealtimeDashboard
 } from '../controllers/googlefit.controller.js';
 import isAuthed from '../middleware/isAuth.js';
+import { isGoogleFitAuthenticated, hasValidLocation, canSyncData } from '../middleware/googleFitAuth.js';
+import { validateGoogleFitRequest, validateLocationData } from '../middleware/requestValidator.js';
 
 const router = express.Router();
 
-// OAuth flow
-router.get('/authorize', getGoogleFitAuthUrl);
+// OAuth flow (basic auth only)
+router.get('/authorize', isAuthed, getGoogleFitAuthUrl);
 router.get('/callback', handleGoogleFitCallback);
 
-// Fitness Data (Real-time)
-router.get('/steps', isAuthed, getStepsData);
-router.get('/heart-rate', isAuthed, getHeartRateData);
-router.get('/body-metrics', isAuthed, getBodyMetrics);
-router.get('/sleep', isAuthed, getSleepData);
-router.get('/blood-pressure', isAuthed, getBloodPressure);
-router.get('/summary', isAuthed, getFitnessSummary);
+// Fitness Data (Real-time) with enhanced authentication and validation
+router.get('/steps', isGoogleFitAuthenticated, validateGoogleFitRequest, canSyncData, getStepsData);
+router.get('/heart-rate', isGoogleFitAuthenticated, validateGoogleFitRequest, canSyncData, getHeartRateData);
+router.get('/body-metrics', isGoogleFitAuthenticated, validateGoogleFitRequest, getBodyMetrics);
+router.get('/sleep', isGoogleFitAuthenticated, validateGoogleFitRequest, getSleepData);
+router.get('/blood-pressure', isGoogleFitAuthenticated, validateGoogleFitRequest, getBloodPressure);
+router.get('/summary', isGoogleFitAuthenticated, validateGoogleFitRequest, getFitnessSummary);
 
-// Location Services (Auto-detection - NO manual entry)
+// Location Services with validation
 router.get('/location/detect', isAuthed, detectAndUpdateLocation); // Auto-detect from IP
-router.get('/location', isAuthed, getCurrentLocation); // Get current location (auto-detects if not set)
+router.get('/location', isAuthed, validateLocationData, getCurrentLocation); // Get current location
 
 // Real-time Dashboard (Comprehensive Data)
-router.get('/dashboard/realtime', isAuthed, getRealtimeDashboard);
+router.get('/dashboard/realtime', isGoogleFitAuthenticated, validateGoogleFitRequest, getRealtimeDashboard);
 
-// Status
+// Status endpoints
 router.get('/status', isAuthed, getConnectionStatus);
 router.post('/disconnect', isAuthed, disconnectGoogleFit);
 

@@ -4,10 +4,18 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import connectDB from "./config/db.js";
 
+// Import middleware
+import { requestLogger, googleFitLogger, errorLogger } from './middleware/logger.js';
+import { rateLimiter, googleFitRateLimiter, authRateLimiter } from './middleware/rateLimiter.js';
+import { validateGoogleFitRequest, validateLocationData, validateProfileUpdate } from './middleware/requestValidator.js';
+import { smartCache } from './middleware/cacheControl.js';
+import errorHandler from './middleware/errorHandler.js';
+
 // Import Routes
 import userRoute from './routes/UserRoute.js';
 import authRoute from './routes/auth.js';
 import googleFitRoute from './routes/googlefit.routes.js'; 
+import healthRoute from './routes/health.routes.js';
 
 dotenv.config();
 connectDB();
@@ -15,7 +23,11 @@ connectDB();
 const app = express();
 const port = process.env.GOOGLE_FIT_PORT || 5002;
 
-// --- 1. MIDDLEWARE (ORDER IS CRITICAL) ---
+// --- 1. GLOBAL MIDDLEWARE (ORDER IS CRITICAL) ---
+// Request logging (first)
+app.use(requestLogger);
+
+// CORS configuration
 app.use(cors({
   origin: ['http://localhost:3000', 'http://localhost:5173','http://localhost:5174','http://localhost:8000','http://localhost:5002'],
   credentials: true,
@@ -23,15 +35,19 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// These two must come BEFORE app.use('/api/user', ...)
+// Body parsing middleware
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// --- 2. ROUTES ---
+// Global rate limiting
+app.use(rateLimiter(100, 60 * 1000)); // 100 requests per minute per user
+
+// --- 2. ROUTES WITH MIDDLEWARE ---
+app.use('/api/auth', authRateLimiter, authRoute);
 app.use('/api/user', userRoute); 
-app.use('/api/auth', authRoute);
-app.use('/api/googlefit', googleFitRoute);
+app.use('/api/googlefit', googleFitRateLimiter, googleFitLogger, smartCache, googleFitRoute);
+app.use('/api/health', healthRoute);
 
 // Test route
 app.get('/api/googlefit/test', (req, res) => {
@@ -40,11 +56,8 @@ app.get('/api/googlefit/test', (req, res) => {
 
 app.get("/", (req, res) => res.send("Eco-Health AI Backend is Live!"));
 
-app.use((err, req, res, next) => {
-  res.status(err.statusCode || 500).json({
-    success: false,
-    message: err.message || "Internal Server Error",
-  });
-});
+// --- 3. ERROR HANDLING (LAST) ---
+app.use(errorLogger);
+app.use(errorHandler);
 
 app.listen(port, () => console.log(`🚀 Server running on http://localhost:${port}`));
