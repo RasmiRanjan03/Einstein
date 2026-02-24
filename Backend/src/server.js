@@ -9,6 +9,7 @@ import dustbinRoutes from './routes/dustbin.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.route.js';
 import aiRoutes from './routes/ai.routes.js'
+import carbon from './routes/carbon.routes.js'
 const app = express();
 
 // ✅ Cloudinary Configuration
@@ -59,6 +60,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/dustbins', dustbinRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/carbon',carbon);
 // ✅ 404 Handler
 app.use((req, res) => {
   res.status(404).json({ 
