@@ -2,9 +2,14 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 import joblib
 import numpy as np
-
+from fastapi.middleware.cors import CORSMiddleware
 app = FastAPI(title="ClimateHealth AI API")
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8080"], # In production, replace with your React URL
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 latest_analysis = {}
 
 # -----------------------------
