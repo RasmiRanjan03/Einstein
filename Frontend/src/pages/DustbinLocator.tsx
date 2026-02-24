@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAppContext } from "@/context/AppContext";
 import { getCurrentPosition } from "@/lib/geolocation";
-import axios from "axios";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Plus, X, Trash2, Navigation, Info } from "lucide-react";
@@ -10,18 +9,11 @@ import DashboardLayout from "@/components/DashboardLayout";
 import GlassCard from "@/components/GlassCard";
 
 delete L.Icon.Default.prototype._getIconUrl;
-
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-
-  iconUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-
-  shadowUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
-// Add this after the L.Icon.Default.mergeOptions block
 
 const userLocationIcon = new L.Icon({
   iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
@@ -32,7 +24,32 @@ const userLocationIcon = new L.Icon({
   shadowSize: [41, 41],
 });
 
+const selectedLocationIcon = new L.Icon({
+  iconUrl: "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png",
+  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
 
+// Handles map click to pick location
+const MapClickHandler = ({
+  enabled,
+  onLocationPick,
+}: {
+  enabled: boolean;
+  onLocationPick: (lat: number, lng: number) => void;
+}) => {
+  useMapEvents({
+    click(e) {
+      if (enabled) {
+        onLocationPick(e.latlng.lat, e.latlng.lng);
+      }
+    },
+  });
+  return null;
+};
 
 const DustbinLocator = () => {
   const { dustbins, addDustbin, fetchNearbyDustbins, loading, error } = useAppContext();
@@ -44,22 +61,42 @@ const DustbinLocator = () => {
   const [addLoading, setAddLoading] = useState(false);
   const [nearest, setNearest] = useState<any[]>([]);
 
+  // New states for map-click location picking
+  const [pickingLocation, setPickingLocation] = useState(false);
+  const [pickedLocation, setPickedLocation] = useState<{ lat: number; lng: number } | null>(null);
+
   useEffect(() => {
-    getCurrentPosition().then(setUserLocation).catch(() => setUserLocation({ lat: 20.132025, lng: 85.596907 }));
+    getCurrentPosition()
+      .then(setUserLocation)
+      .catch(() => setUserLocation({ lat: 20.132025, lng: 85.596907 }));
   }, []);
+
+  const handleAddDustbinClick = () => {
+    setPickingLocation(true);
+    setPickedLocation(null);
+    setShowAddForm(false);
+  };
+
+  const handleLocationPick = (lat: number, lng: number) => {
+    setPickedLocation({ lat, lng });
+    setPickingLocation(false);
+    setShowAddForm(true);
+  };
 
   const handleAddDustbin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!addForm.name || !addForm.image || !userLocation) return;
+    const location = pickedLocation || userLocation;
+    if (!addForm.name || !addForm.image || !location) return;
     setAddLoading(true);
     const formData = new FormData();
     formData.append("name", addForm.name);
-    formData.append("lat", String(userLocation.lat));
-    formData.append("lng", String(userLocation.lng));
+    formData.append("lat", String(location.lat));
+    formData.append("lng", String(location.lng));
     formData.append("image", addForm.image);
     formData.append("reportedBy", "Anonymous");
     await addDustbin(formData);
     setShowAddForm(false);
+    setPickedLocation(null);
     setAddForm({ name: "", image: null });
     setAddLoading(false);
   };
@@ -80,7 +117,7 @@ const DustbinLocator = () => {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => setShowAddForm(true)}
+          onClick={handleAddDustbinClick}
           className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm"
         >
           <Plus className="w-4 h-4" />
@@ -97,11 +134,36 @@ const DustbinLocator = () => {
         </motion.button>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Map placeholder */}
-        <GlassCard className="lg:col-span-2 min-h-[400px] relative overflow-hidden" hover={false}>
+      {/* Picking location banner */}
+      <AnimatePresence>
+        {pickingLocation && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mb-4 flex items-center justify-between px-5 py-3 rounded-xl bg-yellow-500/20 border border-yellow-500/40 text-yellow-400 text-sm font-medium"
+          >
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
+              Click on the map to select the dustbin location
+            </div>
+            <button
+              onClick={() => setPickingLocation(false)}
+              className="text-yellow-400 hover:text-yellow-200"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-          <MapContainer center={userLocation ? [userLocation.lat, userLocation.lng] : [20.132025, 85.596907]}
+      <div className="grid lg:grid-cols-3 gap-6">
+        <GlassCard
+          className={`lg:col-span-2 min-h-[400px] relative overflow-hidden ${pickingLocation ? "ring-2 ring-yellow-500 cursor-crosshair" : ""}`}
+          hover={false}
+        >
+          <MapContainer
+            center={userLocation ? [userLocation.lat, userLocation.lng] : [20.132025, 85.596907]}
             zoom={15}
             scrollWheelZoom={true}
             className="h-[400px] w-full rounded-xl z-0"
@@ -110,18 +172,30 @@ const DustbinLocator = () => {
               attribution="&copy; OpenStreetMap contributors"
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
+
+            {/* Map click handler */}
+            <MapClickHandler enabled={pickingLocation} onLocationPick={handleLocationPick} />
+
+            {/* User location marker */}
             {userLocation && (
-  <Marker position={[userLocation.lat, userLocation.lng]} icon={userLocationIcon}>
-    <Popup>You are here</Popup>
-  </Marker>
-)}
+              <Marker position={[userLocation.lat, userLocation.lng]} icon={userLocationIcon}>
+                <Popup>You are here</Popup>
+              </Marker>
+            )}
+
+            {/* Picked location marker (green) */}
+            {pickedLocation && (
+              <Marker position={[pickedLocation.lat, pickedLocation.lng]} icon={selectedLocationIcon}>
+                <Popup>Selected dustbin location</Popup>
+              </Marker>
+            )}
+
+            {/* Dustbin markers */}
             {(nearest.length > 0 ? nearest : dustbins).map((d) => (
               <Marker
                 key={d._id}
                 position={[d.lat, d.lng]}
-                eventHandlers={{
-                  click: () => setSelected(d._id),
-                }}
+                eventHandlers={{ click: () => setSelected(d._id) }}
               >
                 <Popup>
                   <b>{d.name}</b>
@@ -130,29 +204,30 @@ const DustbinLocator = () => {
                   <br />
                   Reported by: {d.reportedBy}
                   <br />
-                  {new Date(d.createdAt).toLocaleString()}  
+                  {new Date(d.createdAt).toLocaleString()}
                   <br />
-                 <button
-  className="mt-2 px-3 py-1 bg-primary text-primary-foreground rounded text-sm"
-  onClick={() =>
-    window.open(
-      `https://www.google.com/maps/dir/?api=1&origin=${userLocation?.lat},${userLocation?.lng}&destination=${d.lat},${d.lng}`,
-      "_blank"
-    )
-  }
->
-  Get Direction
-</button>
+                  <button
+                    className="mt-2 px-3 py-1 bg-primary text-primary-foreground rounded text-sm"
+                    onClick={() =>
+                      window.open(
+                        `https://www.google.com/maps/dir/?api=1&origin=${userLocation?.lat},${userLocation?.lng}&destination=${d.lat},${d.lng}`,
+                        "_blank"
+                      )
+                    }
+                  >
+                    Get Direction
+                  </button>
                 </Popup>
               </Marker>
             ))}
           </MapContainer>
-
         </GlassCard>
 
         {/* List */}
         <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-foreground mb-3">{nearest.length > 0 ? "Nearest Dustbins" : "All Dustbins"}</h3>
+          <h3 className="text-lg font-semibold text-foreground mb-3">
+            {nearest.length > 0 ? "Nearest Dustbins" : "All Dustbins"}
+          </h3>
           {(nearest.length > 0 ? nearest : dustbins).map((d, i) => (
             <motion.div
               key={d._id}
@@ -290,16 +365,31 @@ const DustbinLocator = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-sm text-muted-foreground mb-1 block">Location</label>
+                    <label className="text-sm text-muted-foreground mb-1 block">Selected Location</label>
                     <div className="flex items-center gap-2 bg-muted/50 border border-border rounded-lg px-3 py-2.5">
-                      <MapPin className="w-4 h-4 text-primary" />
-                      <span className="text-sm text-muted-foreground">{userLocation ? `${userLocation.lat.toFixed(5)}, ${userLocation.lng.toFixed(5)}` : "Detecting..."}</span>
+                      <MapPin className="w-4 h-4 text-green-500" />
+                      <span className="text-sm text-muted-foreground">
+                        {pickedLocation
+                          ? `${pickedLocation.lat.toFixed(5)}, ${pickedLocation.lng.toFixed(5)}`
+                          : "No location selected"}
+                      </span>
+                      {/* Allow re-picking */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowAddForm(false);
+                          setPickingLocation(true);
+                        }}
+                        className="ml-auto text-xs text-primary underline"
+                      >
+                        Change
+                      </button>
                     </div>
                   </div>
                   <button
                     type="submit"
                     className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity"
-                    disabled={addLoading}
+                    disabled={addLoading || !pickedLocation}
                   >
                     {addLoading ? "Submitting..." : "Submit Report"}
                   </button>

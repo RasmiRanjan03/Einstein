@@ -7,9 +7,7 @@ export const protect = async (req, res, next) => {
     let token;
 
     // 1️⃣ Extract token from Authorization header
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
-    }
+    token= req.cookies.token
 
     // Check if token exists
     if (!token) {
@@ -18,6 +16,7 @@ export const protect = async (req, res, next) => {
         message: 'You are not logged in. Please log in to access this resource.' 
       });
     }
+    console.log('🔐 Token found:', token);
 
     // 2️⃣ Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);

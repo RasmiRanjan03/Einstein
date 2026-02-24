@@ -26,7 +26,13 @@ export const signup = async (req, res) => { // REMOVED 'next'
     const token = signToken(newUser._id);
     const userResponse = newUser.toObject();
     delete userResponse.password;
-
+    res.cookie('token', token, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+            path:'/',
+            maxAge: 60 * 60 * 1000
+        });
     return res.status(201).json({ 
       status: 'success', 
       token, 
@@ -79,6 +85,13 @@ export const login = async (req, res) => {
     // Remove password from response
     const userResponse = user.toObject();
     delete userResponse.password;
+    res.cookie('token', token, {
+            httpOnly: true,
+            secure: true,
+            sameSite: "none",
+            path:'/',
+            maxAge: 60 * 60 * 1000
+        });
 
     return res.status(200).json({ 
       status: 'success', 

@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 dotenv.config(); 
-
+import cookieParser from 'cookie-parser';
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
@@ -29,7 +29,7 @@ app.use(cors({
 // ✅ Body Parser Middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
+app.use(cookieParser());
 // ✅ Request timeout middleware for file uploads
 app.use((req, res, next) => {
   // Longer timeout for file upload routes
