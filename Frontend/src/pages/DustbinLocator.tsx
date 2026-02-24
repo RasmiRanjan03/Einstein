@@ -1,15 +1,30 @@
 import { useState } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
+import L from "leaflet";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, Plus, X, Trash2, Navigation, Info } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import GlassCard from "@/components/GlassCard";
 
+delete L.Icon.Default.prototype._getIconUrl;
+
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+
+  iconUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+
+  shadowUrl:
+    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+});
+
 const dustbins = [
-  { id: 1, type: "Recyclable", distance: "120m", condition: "Good", lat: 28.6139, lng: 77.209 },
-  { id: 2, type: "General Waste", distance: "350m", condition: "Fair", lat: 28.6145, lng: 77.2105 },
-  { id: 3, type: "E-Waste", distance: "500m", condition: "New", lat: 28.6128, lng: 77.208 },
-  { id: 4, type: "Organic", distance: "200m", condition: "Good", lat: 28.615, lng: 77.2115 },
-  { id: 5, type: "Recyclable", distance: "750m", condition: "Needs Repair", lat: 28.611, lng: 77.207 },
+  { id: 1, type: "Recyclable", distance: "120m", condition: "Good", lat: 20.132025, lng: 85.596907 }
+  // { id: 2, type: "General Waste", distance: "350m", condition: "Fair", lat: 28.6145, lng: 77.2105 },
+  // { id: 3, type: "E-Waste", distance: "500m", condition: "New", lat: 28.6128, lng: 77.208 },
+  // { id: 4, type: "Organic", distance: "200m", condition: "Good", lat: 28.615, lng: 77.2115 },
+  // { id: 5, type: "Recyclable", distance: "750m", condition: "Needs Repair", lat: 28.611, lng: 77.207 },
 ];
 
 const DustbinLocator = () => {
@@ -38,46 +53,54 @@ const DustbinLocator = () => {
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Map placeholder */}
         <GlassCard className="lg:col-span-2 min-h-[400px] relative overflow-hidden" hover={false}>
-          <div className="absolute inset-0 bg-gradient-to-br from-muted/30 to-background rounded-xl">
-            <div className="absolute inset-0 opacity-10"
-              style={{
-                backgroundImage: "linear-gradient(hsl(183 100% 50% / 0.2) 1px, transparent 1px), linear-gradient(90deg, hsl(183 100% 50% / 0.2) 1px, transparent 1px)",
-                backgroundSize: "40px 40px",
-              }}
+
+          <MapContainer center={[20.132025, 85.596907]}
+            zoom={15}
+            scrollWheelZoom={true}
+            className="h-[400px] w-full rounded-xl z-0"
+          >
+
+            <TileLayer
+              attribution="&copy; OpenStreetMap contributors"
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            {dustbins.map((d, i) => (
-              <motion.button
+
+
+            {/* User Location Marker */}
+
+            <Marker position={[20.132025, 85.596907]}>
+              <Popup>You are here</Popup>
+            </Marker>
+
+
+            {/* Dustbin Markers */}
+
+            {dustbins.map((d) => (
+
+              <Marker
                 key={d.id}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: i * 0.1, type: "spring" }}
-                onClick={() => setSelected(d.id)}
-                className={`absolute p-2 rounded-full transition-all ${
-                  selected === d.id ? "bg-primary glow-primary" : "bg-muted/80 hover:bg-primary/50"
-                }`}
-                style={{
-                  left: `${15 + (i * 18) % 70}%`,
-                  top: `${20 + (i * 23) % 55}%`,
+                position={[d.lat, d.lng]}
+                eventHandlers={{
+                  click: () => setSelected(d.id),
                 }}
               >
-                <Trash2 className="w-4 h-4 text-foreground" />
-              </motion.button>
+
+                <Popup>
+
+                  <b>{d.type}</b>
+                  <br />
+                  Distance: {d.distance}
+                  <br />
+                  Condition: {d.condition}
+
+                </Popup>
+
+              </Marker>
+
             ))}
-            <motion.div
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-            >
-              <div className="relative">
-                <div className="w-4 h-4 rounded-full bg-primary glow-primary" />
-                <div className="absolute inset-0 rounded-full bg-primary/30 animate-ping" />
-              </div>
-            </motion.div>
-          </div>
-          <div className="absolute bottom-4 left-4 flex items-center gap-2 glass rounded-lg px-3 py-2">
-            <Navigation className="w-4 h-4 text-primary" />
-            <span className="text-xs text-foreground">Your Location</span>
-          </div>
+
+          </MapContainer>
+
         </GlassCard>
 
         {/* List */}

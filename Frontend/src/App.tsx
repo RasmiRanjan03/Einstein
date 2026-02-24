@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AppProvider } from "./context/AppContext";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
@@ -17,26 +18,28 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/health" element={<HealthRisk />} />
-          <Route path="/environment" element={<Environment />} />
-          <Route path="/carbon" element={<CarbonFootprint />} />
-          <Route path="/dustbin" element={<DustbinLocator />} />
-          <Route path="/hospital" element={<HospitalLocator />} />
-          <Route path="/prescription" element={<Prescription />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <AppProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/health" element={<HealthRisk />} />
+            <Route path="/environment" element={<Environment />} />
+            <Route path="/carbon" element={<CarbonFootprint />} />
+            <Route path="/dustbin" element={<DustbinLocator />} />
+            <Route path="/hospital" element={<HospitalLocator />} />
+            <Route path="/prescription" element={<Prescription />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </AppProvider>
 );
 
 export default App;
