@@ -22,7 +22,6 @@ const navItems = [
   { title: "Environment", path: "/environment", icon: TreePine },
   { title: "Carbon Impact", path: "/carbon", icon: Footprints },
   { title: "Dustbin Locator", path: "/dustbin", icon: MapPin },
-  { title: "Hospitals", path: "/hospital", icon: Building2 },
   { title: "Prescription", path: "/prescription", icon: Pill },
   { title: "Profile", path: "/profile", icon: User },
 ];
