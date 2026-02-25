@@ -62,7 +62,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/dustbins', dustbinRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/carbon',carbon);
-app.use('/api/health',healthRoute);
+app.use('/api/healths',healthRoute);
 // ✅ 404 Handler
 app.use((req, res) => {
   res.status(404).json({ 
