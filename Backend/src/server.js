@@ -11,6 +11,7 @@ import userRoutes from './routes/user.route.js';
 import aiRoutes from './routes/ai.routes.js';
 import carbon from './routes/carbon.routes.js';
 import healthRoute from './routes/health.routes.js';
+import envRoutes from './routes/healthCarbonEnvironment.route.js';
 
 const app = express();
 
@@ -64,6 +65,7 @@ app.use('/api/dustbins', dustbinRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/carbon',carbon);
 app.use('/api/healths',healthRoute);
+app.use('/api/environment', envRoutes);
 
 // ✅ 404 Handler
 app.use((req, res) => {
