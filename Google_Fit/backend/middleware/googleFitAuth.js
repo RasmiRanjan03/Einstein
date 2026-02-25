@@ -2,10 +2,74 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { google } from 'googleapis';
 
-// Enhanced authentication middleware that also validates Google Fit connection
+// Enhanced authentication with proper token refresh
+export const getAuthenticatedClient = async (userId) => {
+    try {
+        const user = await User.findById(userId);
+        if (!user?.googleFit?.isConnected) {
+            throw new Error('Google Fit not connected');
+        }
+
+        const oauth2Client = new google.auth.OAuth2(
+            process.env.GOOGLE_CLIENT_ID,
+            process.env.GOOGLE_CLIENT_SECRET,
+            process.env.GOOGLE_REDIRECT_URI
+        );
+
+        // Set credentials with refresh token
+        oauth2Client.setCredentials({
+            access_token: user.googleFit.accessToken,
+            refresh_token: user.googleFit.refreshToken
+        });
+
+        // Set up automatic token refresh
+        oauth2Client.on('tokens', async (tokens) => {
+            if (tokens.access_token) {
+                await User.findByIdAndUpdate(userId, { 
+                    'googleFit.accessToken': tokens.access_token,
+                    'googleFit.isConnected': true 
+                });
+                console.log(`Token refreshed for user ${userId}`);
+            }
+        });
+
+        // Test if current token is valid
+        try {
+            const fitness = google.fitness({ version: 'v1', auth: oauth2Client });
+            await fitness.users.dataSources.list({ userId: 'me' });
+            return oauth2Client;
+        } catch (tokenError) {
+            if (tokenError.code === 401 || tokenError.message?.includes('invalid_grant')) {
+                // Token expired, try to refresh
+                try {
+                    const { credentials } = await oauth2Client.refreshAccessToken();
+                    await User.findByIdAndUpdate(userId, {
+                        'googleFit.accessToken': credentials.access_token,
+                        'googleFit.isConnected': true
+                    });
+                    console.log(`Manual token refresh successful for user ${userId}`);
+                    return oauth2Client;
+                } catch (refreshError) {
+                    // Refresh failed, user needs to re-authenticate
+                    await User.findByIdAndUpdate(userId, {
+                        'googleFit.isConnected': false,
+                        'googleFit.accessToken': null
+                    });
+                    throw new Error('Google Fit authorization expired. Please reconnect your account.');
+                }
+            }
+            throw tokenError;
+        }
+    } catch (error) {
+        console.error('Google Fit auth error:', error);
+        throw error;
+    }
+};
+
+// Enhanced authentication middleware
 export const isGoogleFitAuthenticated = async (req, res, next) => {
     try {
-        // First check if user is authenticated
+        // Check JWT token first
         const token = req.cookies.token;
         if (!token) {
             return res.status(401).json({ 
@@ -43,75 +107,26 @@ export const isGoogleFitAuthenticated = async (req, res, next) => {
             });
         }
 
-        // Validate Google Fit tokens by attempting a simple API call
-        try {
-            const oauth2Client = new google.auth.OAuth2(
-                process.env.GOOGLE_CLIENT_ID,
-                process.env.GOOGLE_CLIENT_SECRET,
-                process.env.GOOGLE_REDIRECT_URI
-            );
-
-            oauth2Client.setCredentials({
-                access_token: user.googleFit.accessToken,
-                refresh_token: user.googleFit.refreshToken
-            });
-
-            // Test the connection with a lightweight API call
-            const fitness = google.fitness({ version: 'v1', auth: oauth2Client });
-            await fitness.users.dataSources.list({ userId: 'me' });
-
-        } catch (googleError) {
-            // Handle token expiration
-            if (googleError.code === 401 || googleError.message?.includes('invalid_grant')) {
-                // Try to refresh the token
-                try {
-                    const oauth2Client = new google.auth.OAuth2(
-                        process.env.GOOGLE_CLIENT_ID,
-                        process.env.GOOGLE_CLIENT_SECRET,
-                        process.env.GOOGLE_REDIRECT_URI
-                    );
-
-                    oauth2Client.setCredentials({
-                        refresh_token: user.googleFit.refreshToken
-                    });
-
-                    const { credentials } = await oauth2Client.refreshAccessToken();
-                    
-                    // Update user with new tokens
-                    await User.findByIdAndUpdate(user._id, {
-                        'googleFit.accessToken': credentials.access_token,
-                        'googleFit.isConnected': true
-                    });
-
-                    // Update user object for this request
-                    user.googleFit.accessToken = credentials.access_token;
-
-                } catch (refreshError) {
-                    // Refresh failed, user needs to re-authenticate
-                    return res.status(401).json({ 
-                        success: false,
-                        message: 'Google Fit authorization expired. Please reconnect your account.',
-                        error: 'GOOGLE_FIT_AUTH_EXPIRED',
-                        requiresReauth: true
-                    });
-                }
-            } else {
-                // Other Google API errors
-                return res.status(502).json({ 
-                    success: false,
-                    message: 'Google Fit API error. Please try again later.',
-                    error: 'GOOGLE_FIT_API_ERROR',
-                    details: googleError.message
-                });
-            }
-        }
-
-        // Attach user to request and proceed
+        // Get authenticated client (handles token refresh automatically)
+        const authClient = await getAuthenticatedClient(user._id);
+        
+        // Attach both user and auth client to request
         req.user = user;
+        req.googleFitAuth = authClient;
+        
         next();
-
     } catch (error) {
         console.error('Google Fit Auth Middleware Error:', error);
+        
+        if (error.message.includes('authorization expired')) {
+            return res.status(401).json({ 
+                success: false,
+                message: 'Google Fit authorization expired. Please reconnect your account.',
+                error: 'GOOGLE_FIT_AUTH_EXPIRED',
+                requiresReauth: true
+            });
+        }
+        
         return res.status(500).json({ 
             success: false,
             message: 'Authentication error',

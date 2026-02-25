@@ -1,5 +1,7 @@
 import { google } from 'googleapis';
 import User from '../models/User.js';
+import { getAuthenticatedClient } from '../middleware/googleFitAuth.js';
+import { saveDashboardData } from './dashboard.controller.js';
 
 const FITNESS_SCOPES = [
     'openid',
@@ -13,32 +15,12 @@ const FITNESS_SCOPES = [
     'https://www.googleapis.com/auth/fitness.blood_pressure.read'
 ];
 
-// --- HELPER: AUTH CLIENT ---
-const getAuthenticatedClient = async (userId) => {
-    const user = await User.findById(userId);
-    if (!user?.googleFit?.isConnected) throw new Error('Google Fit not connected');
-    const oauth2Client = new google.auth.OAuth2(
-        process.env.GOOGLE_CLIENT_ID,
-        process.env.GOOGLE_CLIENT_SECRET,
-        process.env.GOOGLE_REDIRECT_URI
-    );
-    oauth2Client.setCredentials({
-        access_token: user.googleFit.accessToken,
-        refresh_token: user.googleFit.refreshToken
-    });
-    oauth2Client.on('tokens', async (tokens) => {
-        if (tokens.access_token) {
-            await User.findByIdAndUpdate(userId, { 'googleFit.accessToken': tokens.access_token });
-        }
-    });
-    return oauth2Client;
-};
-
 // --- HELPER: FETCH REAL-TIME LOCATION ---
 const fetchLocationData = async (lat, lon) => {
     try {
         const weatherKey = process.env.WEATHER_API_KEY;
-        // Fetch weather + Address name
+        
+        // Fetch weather data
         const weatherRes = await fetch(
             `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${weatherKey}&units=metric`
         );
@@ -46,39 +28,81 @@ const fetchLocationData = async (lat, lon) => {
         if (!weatherRes.ok) throw new Error('Weather API failed');
         const weather = await weatherRes.json();
         
+        // Fetch AQI data (Air Quality Index)
+        let aqi = null;
+        try {
+            const aqiRes = await fetch(
+                `http://api.openweathermap.org/data/2.5/air_pollution?lat=${lat}&lon=${lon}&appid=${weatherKey}`
+            );
+            if (aqiRes.ok) {
+                const aqiData = await aqiRes.json();
+                aqi = aqiData.list?.[0]?.main?.aqi || null;
+            }
+        } catch (aqiError) {
+            console.log('AQI data not available:', aqiError.message);
+        }
+        
         return {
             latitude: lat,
             longitude: lon,
-            city: weather.name,
-            country: weather.sys.country,
-            address: `${weather.name}, ${weather.sys.country}`,
-            temperature: weather.main.temp,
-            humidity: weather.main.humidity,
-            condition: weather.weather[0].main,
+            city: weather.name || 'Unknown',
+            country: weather.sys?.country || 'Unknown',
+            address: `${weather.name || 'Unknown'}, ${weather.sys?.country || 'Unknown'}`,
+            temperature: weather.main?.temp || 0,
+            humidity: weather.main?.humidity || 0,
+            condition: weather.weather?.[0]?.main || 'Unknown',
+            description: weather.weather?.[0]?.description || 'Unknown',
+            windSpeed: weather.wind?.speed || 0,
+            pressure: weather.main?.pressure || 0,
+            visibility: weather.visibility || 0,
+            aqi: aqi,
+            aqiDescription: getAQIDescription(aqi),
             timestamp: new Date()
         };
     } catch (error) {
         console.error('Location fetch error:', error);
-        return { latitude: lat, longitude: lon, timestamp: new Date(), error: "Weather data unavailable" };
+        return { 
+            latitude: lat, 
+            longitude: lon, 
+            timestamp: new Date(), 
+            error: "Weather data unavailable",
+            city: 'Unknown',
+            country: 'Unknown'
+        };
     }
+};
+
+// Helper function to get AQI description
+const getAQIDescription = (aqi) => {
+    if (aqi === 1) return 'Good';
+    if (aqi === 2) return 'Fair';
+    if (aqi === 3) return 'Moderate';
+    if (aqi === 4) return 'Poor';
+    if (aqi === 5) return 'Very Poor';
+    return 'Unknown';
 };
 
 // --- AUTH ROUTES ---
 export const getGoogleFitAuthUrl = (req, res) => {
-    // Get userId from query params instead of req.user
-    const { userId } = req.query; 
+    const { userId } = req.query;
+
+    // Use the variable from .env. If it's missing, it defaults to 5002.
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI || "http://localhost:5002/api/googlefit/callback";
+    
+    // DEBUG: Look at your terminal! This will tell us what is actually being sent.
+    console.log(">>> Outgoing Redirect URI to Google:", redirectUri);
 
     const oauth2Client = new google.auth.OAuth2(
-        process.env.GOOGLE_CLIENT_ID, 
-        process.env.GOOGLE_CLIENT_SECRET, 
-        process.env.GOOGLE_REDIRECT_URI
+        process.env.GOOGLE_CLIENT_ID,
+        process.env.GOOGLE_CLIENT_SECRET,
+        redirectUri // Use the variable here
     );
 
-    const url = oauth2Client.generateAuthUrl({ 
-        access_type: 'offline', 
-        scope: FITNESS_SCOPES, 
-        state: userId, // Pass the ID here
-        prompt: 'consent' 
+    const url = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: FITNESS_SCOPES,
+        state: userId,
+        prompt: 'consent'
     });
 
     res.status(200).json({ success: true, url });
@@ -90,7 +114,7 @@ export const handleGoogleFitCallback = async (req, res) => {
         const oauth2Client = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, process.env.GOOGLE_REDIRECT_URI);
         const { tokens } = await oauth2Client.getToken(code);
         await User.findByIdAndUpdate(state, { 'googleFit.accessToken': tokens.access_token, 'googleFit.refreshToken': tokens.refresh_token, 'googleFit.isConnected': true, 'googleFit.connectedAt': new Date() });
-        res.send("<h1>✅ Connected! Return to app.</h1>");
+        res.send("<button onclick='window.close()'>✅ Connected! Return to app.</button>");
     } catch (error) { res.status(500).json({ success: false, error: error.message }); }
 };
 
@@ -669,7 +693,23 @@ export const getCurrentLocation = async (req, res) => {
 // --- REAL-TIME HEALTH DASHBOARD ---
 export const getRealtimeDashboard = async (req, res) => {
     try {
-        const auth = await getAuthenticatedClient(req.user._id);
+        // Handle userId from query parameter for direct access
+        const { userId } = req.query;
+        let user = req.user;
+        
+        if (userId && !user) {
+            // If userId is provided in query, fetch user directly
+            user = await User.findById(userId);
+            if (!user) {
+                return res.status(404).json({ success: false, message: 'User not found' });
+            }
+        }
+        
+        if (!user) {
+            return res.status(401).json({ success: false, message: 'User authentication required' });
+        }
+
+        const auth = await getAuthenticatedClient(user._id);
         const fitness = google.fitness({ version: 'v1', auth });
 
         const now = new Date().getTime();
@@ -677,24 +717,16 @@ export const getRealtimeDashboard = async (req, res) => {
         const lookback7Days = now - (7 * 24 * 60 * 60 * 1000);
         const lookback30Days = now - (30 * 24 * 60 * 60 * 1000); // For body metrics
 
-        // Auto-detect location if not set
-        let lat = req.user.profile.location?.lat || 0;
-        let lon = req.user.profile.location?.lon || 0;
+        // Use default coordinates if location not set
+        let lat = user.profile.location?.lat || 20.133073999999997;
+        let lon = user.profile.location?.lon || 85.619011;
         
-        if (!lat || !lon || (lat === 0 && lon === 0)) {
-            try {
-                const ipLookup = await fetch('http://ip-api.com/json/');
-                const ipData = await ipLookup.json();
-                if (ipData.status === 'success') {
-                    lat = ipData.lat;
-                    lon = ipData.lon;
-                    // Auto-save location
-                    await User.findByIdAndUpdate(req.user._id, {
-                        'profile.location.lat': lat,
-                        'profile.location.lon': lon
-                    });
-                }
-            } catch (e) { console.log('Location auto-detect failed:', e.message); }
+        // If location is still default values, update user location
+        if (!user.profile.location?.lat || !user.profile.location?.lon) {
+            await User.findByIdAndUpdate(user._id, {
+                'profile.location.lat': lat,
+                'profile.location.lon': lon
+            });
         }
 
         // Fetch activity data (steps, calories, heart rate) with hourly buckets
@@ -812,15 +844,37 @@ export const getRealtimeDashboard = async (req, res) => {
             locationData = await fetchLocationData(lat, lon);
         }
 
-        // Update user with latest data and get updated user
+        // Update user with all latest data and get updated user
         const updateData = {
             'healthStats.steps': todayStats.steps,
+            'healthStats.calories': todayStats.calories,
+            'healthStats.distance': todayStats.distance,
             'healthStats.heartRate': Math.round(todayStats.currentHeartRate),
+            'healthStats.heartMinutes': todayStats.heartMinutes,
             'profile.weight': weight,
             'profile.height': height, // Now in centimeters
             'profile.bmi': bmi,
+            'profile.location.lat': lat,
+            'profile.location.lon': lon,
+            'profile.location.city': locationData?.city || 'Unknown',
+            'profile.location.country': locationData?.country || 'Unknown',
+            'profile.location.address': locationData?.address || 'Unknown',
             'healthStats.lastSync': new Date()
         };
+        
+        // Update environment data if available
+        if (locationData) {
+            updateData['environment.temperature'] = locationData.temperature;
+            updateData['environment.humidity'] = locationData.humidity;
+            updateData['environment.windSpeed'] = locationData.windSpeed;
+            updateData['environment.pressure'] = locationData.pressure;
+            updateData['environment.visibility'] = locationData.visibility;
+            updateData['environment.condition'] = locationData.condition;
+            updateData['environment.description'] = locationData.description;
+            updateData['environment.aqi'] = locationData.aqi;
+            updateData['environment.aqiDescription'] = locationData.aqiDescription;
+            updateData['environment.lastWeatherUpdate'] = new Date();
+        }
         
         // Only update blood pressure if we have valid data
         if (hasBloodPressure) {
@@ -828,15 +882,9 @@ export const getRealtimeDashboard = async (req, res) => {
             updateData['healthStats.bloodPressure.diastolic'] = Math.round(diastolic);
         }
         
-        const updatedUser = await User.findByIdAndUpdate(req.user._id, updateData, { new: true });
-        
-        // Update req.user with all latest data
-        req.user = updatedUser;
+        const updatedUser = await User.findByIdAndUpdate(user._id, updateData, { new: true });
 
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
-        res.setHeader('Pragma', 'no-cache');
-        
-        // Build blood pressure response (show "Not available" if no data)
+        // Update blood pressure response
         const bloodPressureResponse = hasBloodPressure 
             ? {
                 systolic: Math.round(systolic),
@@ -853,7 +901,8 @@ export const getRealtimeDashboard = async (req, res) => {
                 available: false
               };
         
-        res.json({
+        // Create dashboard response object
+        const dashboardResponse = {
             success: true,
             dashboard: {
                 today: {
@@ -875,7 +924,17 @@ export const getRealtimeDashboard = async (req, res) => {
                 lastSync: new Date(),
                 syncStatus: 'real-time'
             }
-        });
+        };
+
+        // Save dashboard data to database
+        try {
+            await saveDashboardData(user._id, dashboardResponse.dashboard);
+        } catch (saveError) {
+            console.error('Error saving dashboard data:', saveError);
+            // Don't fail the request, just log the error
+        }
+        
+        res.json(dashboardResponse);
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }

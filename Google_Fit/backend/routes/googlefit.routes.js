@@ -33,11 +33,11 @@ router.get('/blood-pressure', isGoogleFitAuthenticated, validateGoogleFitRequest
 router.get('/summary', isGoogleFitAuthenticated, validateGoogleFitRequest, getFitnessSummary);
 
 // Location Services with validation
-router.get('/location/detect', isAuthed, detectAndUpdateLocation); // Auto-detect from IP
-router.get('/location', isAuthed, validateLocationData, getCurrentLocation); // Get current location
+router.get('/location/detect', isGoogleFitAuthenticated, detectAndUpdateLocation); // Auto-detect from IP
+router.get('/location', isGoogleFitAuthenticated, validateLocationData, getCurrentLocation); // Get current location
 
-// Real-time Dashboard (Comprehensive Data)
-router.get('/dashboard/realtime', isGoogleFitAuthenticated, validateGoogleFitRequest, getRealtimeDashboard);
+// Real-time Dashboard (Comprehensive Data) - Allow userId query for direct access
+router.get('/dashboard/realtime', getRealtimeDashboard);
 
 // Status endpoints
 router.get('/status', isAuthed, getConnectionStatus);
