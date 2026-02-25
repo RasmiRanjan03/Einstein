@@ -1,84 +1,197 @@
 import React, { useState } from 'react';
-import axios from 'axios';
-import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, ArrowRight, Sparkles } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, ArrowRight, Zap } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAppContext } from '@/context/AppContext';
 import { toast } from 'sonner';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+import ParticleBackground from '@/components/ParticleBackground';
+import Navbar from '@/components/Navbar';
 
 const SigninPage = () => {
   const { login } = useAppContext();
-  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  
-
-const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!email.trim() || !password.trim()) {
       toast.error("Please fill in all fields");
       return;
     }
-    login(email,password);
-    
+    setAuthLoading(true);
+    await login(email, password);
+    setAuthLoading(false);
   };
 
-  // ...existing animation and UI code from your sample...
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* ...existing animated background and grid code... */}
-      <motion.div className="signin-container relative z-10 w-full max-w-4xl">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
-          {/* ...existing left side graphics... */}
-          <motion.div className="p-8 lg:p-12 rounded-3xl bg-gradient-to-br from-slate-800/50 to-purple-900/30 border border-purple-500/20 backdrop-blur-xl">
-            <motion.div className="mb-8">
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles size={24} className="text-cyan-400" />
-                <h2 className="text-3xl lg:text-4xl font-black text-white">Sign In</h2>
-              </div>
-              <p className="text-purple-300/70 font-medium">Access your dashboard and make an impact</p>
+    <div className="min-h-screen bg-background relative overflow-hidden flex flex-col">
+      <ParticleBackground />
+      <Navbar />
+
+      <div className="flex-1 flex items-center justify-center px-4 py-20">
+        <div className="w-full max-w-5xl grid lg:grid-cols-2 gap-12 items-center">
+
+          {/* Left Side - Branding */}
+          <motion.div
+            initial={{ opacity: 0, x: -40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+            className="hidden lg:flex flex-col gap-6"
+          >
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass text-xs text-primary w-fit"
+            >
+              <Zap className="w-3 h-3" />
+              AI-Powered Climate Health Platform
             </motion.div>
-            {(error) && (
-              <motion.div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-2xl text-red-400 text-sm font-bold flex items-center gap-3 backdrop-blur-sm">
-                <AlertCircle size={18} className="flex-shrink-0" />
-                <span>{error}</span>
-              </motion.div>
-            )}
-            <form onSubmit={handleLogin} className="space-y-5">
-              <motion.div className="form-field space-y-2">
-                <label className="text-xs font-bold uppercase tracking-widest text-purple-300/70 px-1 block">Email Address</label>
-                <motion.div className="relative group">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-400/50" size={20} />
-                  <input type="email" name="email" value={email} placeholder="you@company.com" className="w-full bg-purple-950/30 border border-purple-500/20 rounded-2xl py-4 pl-12 pr-4 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 focus:bg-purple-950/50 transition-all duration-300 text-white placeholder:text-purple-400/40 font-medium" onChange={(e) => setEmail(e.target.value)   } required />
+
+            <h1 className="text-5xl font-extrabold leading-tight">
+              <span className="text-gradient-primary neon-text">CLIMACARE</span>
+              <br />
+              <span className="text-foreground">AI</span>
+            </h1>
+
+            <p className="text-muted-foreground text-lg leading-relaxed max-w-md">
+              Protect Your Health. Protect Your Planet. AI-driven insights connecting climate data to personal wellness.
+            </p>
+
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              {[
+                { val: "98%", label: "Accuracy Rate" },
+                { val: "50K+", label: "Active Users" },
+                { val: "120+", label: "Cities Covered" },
+                { val: "24/7", label: "Real-time Data" },
+              ].map((s, i) => (
+                <motion.div
+                  key={s.label}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 + i * 0.1 }}
+                  className="glass rounded-xl p-4 text-center"
+                >
+                  <div className="text-2xl font-bold text-gradient-primary mb-1">{s.val}</div>
+                  <div className="text-xs text-muted-foreground">{s.label}</div>
                 </motion.div>
-              </motion.div>
-              <motion.div className="form-field space-y-2">
-                <div className="flex items-center justify-between px-1">
-                  <label className="text-xs font-bold uppercase tracking-widest text-purple-300/70 block">Password</label>
-                  <Link to="/forgot-password" className="text-xs text-cyan-400 hover:text-cyan-300 font-bold transition-colors duration-300">Forgot?</Link>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Right Side - Form */}
+          <motion.div
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <div className="glass rounded-2xl p-8 border border-border">
+              {/* Header */}
+              <div className="mb-8">
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full glass text-xs text-primary mb-4"
+                >
+                  <Zap className="w-3 h-3" />
+                  Welcome Back
+                </motion.div>
+                <h2 className="text-3xl font-extrabold text-foreground">Sign In</h2>
+                <p className="text-muted-foreground mt-1">Access your dashboard and make an impact</p>
+              </div>
+
+              {/* Error */}
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-sm flex items-center gap-3"
+                >
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {error}
+                </motion.div>
+              )}
+
+              {/* Form */}
+              <form onSubmit={handleLogin} className="space-y-5">
+                {/* Email */}
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground block">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      required
+                      className="w-full bg-muted/50 border border-border rounded-xl py-3 pl-11 pr-4 text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
+                    />
+                  </div>
                 </div>
-                <motion.div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-purple-400/50" size={20} />
-                  <input type={showPassword ? "text" : "password"} name="password" value={password} placeholder="••••••••••" className="w-full bg-purple-950/30 border border-purple-500/20 rounded-2xl py-4 pl-12 pr-12 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 focus:border-cyan-400/50 focus:bg-purple-950/50 transition-all duration-300 text-white placeholder:text-purple-400/40 font-medium" onChange={(e) => setPassword(e.target.value)} required />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-purple-400/50 hover:text-cyan-400 transition-colors duration-300">{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button>
-                </motion.div>
-              </motion.div>
-              <motion.button type="submit" disabled={authLoading} className="w-full mt-8 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 disabled:from-purple-900 disabled:to-purple-800 disabled:cursor-not-allowed text-white font-black py-4 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 shadow-xl shadow-purple-600/50 group relative overflow-hidden">
-                {authLoading ? (<><Loader2 className="animate-spin" size={20} /><span>Signing In...</span></>) : (<><span>Sign In</span><ArrowRight size={20} className="group-hover:translate-x-1 transition-transform duration-300" /></>)}
-              </motion.button>
-            </form>
-            <motion.p className="text-center mt-8 text-sm text-purple-300/70 font-medium">Don't have an account?{' '}<Link to="/signup" className="text-cyan-400 font-bold hover:text-cyan-300 transition-colors duration-300">Create one</Link></motion.p>
+
+                {/* Password */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground block">
+                      Password
+                    </label>
+                    <Link to="/forgot-password" className="text-xs text-primary hover:opacity-80 transition-opacity font-medium">
+                      Forgot?
+                    </Link>
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••••"
+                      required
+                      className="w-full bg-muted/50 border border-border rounded-xl py-3 pl-11 pr-11 text-foreground placeholder:text-muted-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Submit */}
+                <motion.button
+                  type="submit"
+                  disabled={authLoading}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full mt-2 px-8 py-3.5 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {authLoading ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /><span>Signing In...</span></>
+                  ) : (
+                    <><span>Sign In</span><ArrowRight className="w-4 h-4" /></>
+                  )}
+                </motion.button>
+              </form>
+
+              <p className="text-center mt-6 text-sm text-muted-foreground">
+                Don't have an account?{' '}
+                <Link to="/signup" className="text-primary font-semibold hover:opacity-80 transition-opacity">
+                  Create one
+                </Link>
+              </p>
+            </div>
           </motion.div>
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

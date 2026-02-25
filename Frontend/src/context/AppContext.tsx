@@ -50,9 +50,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   lng: number;
 } | null>(null);
   const [user, setUser] = useState<any>(() => {
-    const stored = localStorage.getItem('user');
-    return stored ? JSON.parse(stored) : null;
-  });
+  try {
+    const stored = getCookie('user');
+    return stored ? JSON.parse(stored) : null; // ✅ check before parsing
+  } catch {
+    return null; // ✅ fallback if cookie is malformed
+  }
+});
   const [dustbins, setDustbins] = useState<Dustbin[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
