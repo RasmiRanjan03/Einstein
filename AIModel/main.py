@@ -3,10 +3,13 @@ from pydantic import BaseModel
 import joblib
 import numpy as np
 from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="ClimateHealth AI API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8080"], # In production, replace with your React URL
+    allow_origins=[
+        "http://localhost:8080"
+    ],  # In production, replace with your React URL
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -23,6 +26,7 @@ surge_model = joblib.load("models/climate_surge_model.pkl")
 # =====================================================
 # 1️⃣ HEALTH MODEL
 # =====================================================
+
 
 class HealthInput(BaseModel):
     age: float
@@ -41,19 +45,23 @@ class HealthInput(BaseModel):
 @app.post("/predict-health")
 def predict_health(data: HealthInput):
     try:
-        features = np.array([[
-            data.age,
-            data.gender,
-            data.bmi,
-            data.systolic_bp,
-            data.diastolic_bp,
-            data.cholesterol,
-            data.glucose,
-            data.smoking,
-            data.physical_activity,
-            data.aqi_exposure,
-            data.heat_exposure
-        ]])
+        features = np.array(
+            [
+                [
+                    data.age,
+                    data.gender,
+                    data.bmi,
+                    data.systolic_bp,
+                    data.diastolic_bp,
+                    data.cholesterol,
+                    data.glucose,
+                    data.smoking,
+                    data.physical_activity,
+                    data.aqi_exposure,
+                    data.heat_exposure,
+                ]
+            ]
+        )
 
         # Get probabilities
         proba = health_model.predict_proba(features)
@@ -66,38 +74,40 @@ def predict_health(data: HealthInput):
         overall_score = round((cardio_risk + respiratory_risk + heat_risk) / 3, 2)
 
         def risk_level(score):
-            if score < 0.33:
-                return "LOW RISK"
-            elif score < 0.66:
+            if score < 0.66:
+                return "HIGH RISK"
+            elif score < 0.40:
                 return "MODERATE RISK"
             else:
-                return "HIGH RISK"
+                return "LOW RISK"
 
         return {
             "cardiovascular_risk": {
                 "probability": round(cardio_risk, 2),
-                "level": risk_level(cardio_risk)
+                "level": risk_level(cardio_risk),
             },
             "respiratory_risk": {
                 "probability": round(respiratory_risk, 2),
-                "level": risk_level(respiratory_risk)
+                "level": risk_level(respiratory_risk),
             },
             "heat_vulnerability": {
                 "probability": round(heat_risk, 2),
-                "level": risk_level(heat_risk)
+                "level": risk_level(heat_risk),
             },
             "overall_health_score": {
                 "score": overall_score,
-                "level": risk_level(overall_score)
-            }
+                "level": risk_level(overall_score),
+            },
         }
 
     except Exception as e:
         return {"error": str(e)}
 
+
 # =====================================================
 # 2️⃣ CARBON MODEL
 # =====================================================
+
 
 class CarbonInput(BaseModel):
     meat_meals_per_week: float
@@ -112,15 +122,19 @@ class CarbonInput(BaseModel):
 @app.post("/predict-carbon")
 def predict_carbon(data: CarbonInput):
     try:
-        features = np.array([[
-            data.meat_meals_per_week,
-            data.dairy_consumption,
-            data.veg_consumption,
-            data.car_km_per_week,
-            data.public_transport_km,
-            data.electricity_kwh,
-            data.plastic_waste_kg
-        ]])
+        features = np.array(
+            [
+                [
+                    data.meat_meals_per_week,
+                    data.dairy_consumption,
+                    data.veg_consumption,
+                    data.car_km_per_week,
+                    data.public_transport_km,
+                    data.electricity_kwh,
+                    data.plastic_waste_kg,
+                ]
+            ]
+        )
 
         # Predict annual carbon emission
         carbon_value = float(carbon_model.predict(features)[0])
@@ -131,9 +145,9 @@ def predict_carbon(data: CarbonInput):
         sustainability_score = max(0, min(1, sustainability_score))
 
         def carbon_level(value):
-            if value < 1000:
+            if value < 20:
                 return "LOW IMPACT"
-            elif value < 2000:
+            elif value < 40:
                 return "MODERATE IMPACT"
             else:
                 return "HIGH IMPACT"
@@ -141,15 +155,17 @@ def predict_carbon(data: CarbonInput):
         return {
             "annual_carbon_emission_kg": round(carbon_value, 2),
             "impact_level": carbon_level(carbon_value),
-            "sustainability_score": sustainability_score
+            "sustainability_score": sustainability_score,
         }
 
     except Exception as e:
         return {"error": str(e)}
 
+
 # =====================================================
 # 3️⃣ SURGE MODEL
 # =====================================================
+
 
 class SurgeInput(BaseModel):
     avg_temp: float
@@ -164,15 +180,19 @@ class SurgeInput(BaseModel):
 @app.post("/predict-surge")
 def predict_surge(data: SurgeInput):
     try:
-        features = np.array([[
-            data.avg_temp,
-            data.humidity,
-            data.heat_index,
-            data.aqi,
-            data.percent_beds_occupied,
-            data.percent_icu_occupied,
-            data.prev_admissions
-        ]])
+        features = np.array(
+            [
+                [
+                    data.avg_temp,
+                    data.humidity,
+                    data.heat_index,
+                    data.aqi,
+                    data.percent_beds_occupied,
+                    data.percent_icu_occupied,
+                    data.prev_admissions,
+                ]
+            ]
+        )
 
         predicted_value = float(surge_model.predict(features)[0])
 
@@ -201,26 +221,29 @@ def predict_surge(data: SurgeInput):
             "predicted_ER_increase_percent": predicted_increase,
             "risk_level": surge_level(predicted_increase),
             "overload_probability": overload_probability,
-            "emergency_status": emergency_status(overload_probability)
+            "emergency_status": emergency_status(overload_probability),
         }
 
     except Exception as e:
         return {"error": str(e)}
+
+
 # =====================================================
 # ROOT
 # =====================================================
+
 
 @app.get("/")
 def home():
     return {"message": "ClimateHealth AI API Running Successfully"}
 
-# For the prescription of the user 
+
+# For the prescription of the user
+
 
 @app.post("/final-prescription")
 def final_prescription(
-    health_score: float,
-    carbon_emission: float,
-    overload_probability: float
+    health_score: float, carbon_emission: float, overload_probability: float
 ):
     prescription = []
     alert_message = ""
@@ -259,10 +282,11 @@ def final_prescription(
 
     return {
         "alert": alert_message if alert_message else "Stable condition.",
-        "prescription_plan": prescription
+        "prescription_plan": prescription,
     }
-   
-# Combined Endpoint for all analyses and prescription  
+
+
+# Combined Endpoint for all analyses and prescription
 @app.post("/analyze")
 def analyze(data: dict):
     global latest_analysis
@@ -278,19 +302,23 @@ def analyze(data: dict):
         # ---------------------
         # HEALTH MODEL
         # ---------------------
-        health_features = np.array([[
-            health_data["age"],
-            health_data["gender"],
-            health_data["bmi"],
-            health_data["systolic_bp"],
-            health_data["diastolic_bp"],
-            health_data["cholesterol"],
-            health_data["glucose"],
-            health_data["smoking"],
-            health_data["physical_activity"],
-            health_data["aqi_exposure"],
-            health_data["heat_exposure"]
-        ]])
+        health_features = np.array(
+            [
+                [
+                    health_data["age"],
+                    health_data["gender"],
+                    health_data["bmi"],
+                    health_data["systolic_bp"],
+                    health_data["diastolic_bp"],
+                    health_data["cholesterol"],
+                    health_data["glucose"],
+                    health_data["smoking"],
+                    health_data["physical_activity"],
+                    health_data["aqi_exposure"],
+                    health_data["heat_exposure"],
+                ]
+            ]
+        )
 
         health_proba = health_model.predict_proba(health_features)
 
@@ -302,30 +330,38 @@ def analyze(data: dict):
         # ---------------------
         # CARBON MODEL
         # ---------------------
-        carbon_features = np.array([[
-            carbon_data["meat_meals_per_week"],
-            carbon_data["dairy_consumption"],
-            carbon_data["veg_consumption"],
-            carbon_data["car_km_per_week"],
-            carbon_data["public_transport_km"],
-            carbon_data["electricity_kwh"],
-            carbon_data["plastic_waste_kg"]
-        ]])
+        carbon_features = np.array(
+            [
+                [
+                    carbon_data["meat_meals_per_week"],
+                    carbon_data["dairy_consumption"],
+                    carbon_data["veg_consumption"],
+                    carbon_data["car_km_per_week"],
+                    carbon_data["public_transport_km"],
+                    carbon_data["electricity_kwh"],
+                    carbon_data["plastic_waste_kg"],
+                ]
+            ]
+        )
 
         carbon_value = float(carbon_model.predict(carbon_features)[0])
 
         # ---------------------
         # SURGE MODEL
         # ---------------------
-        surge_features = np.array([[
-            surge_data["avg_temp"],
-            surge_data["humidity"],
-            surge_data["heat_index"],
-            surge_data["aqi"],
-            surge_data["percent_beds_occupied"],
-            surge_data["percent_icu_occupied"],
-            surge_data["prev_admissions"]
-        ]])
+        surge_features = np.array(
+            [
+                [
+                    surge_data["avg_temp"],
+                    surge_data["humidity"],
+                    surge_data["heat_index"],
+                    surge_data["aqi"],
+                    surge_data["percent_beds_occupied"],
+                    surge_data["percent_icu_occupied"],
+                    surge_data["prev_admissions"],
+                ]
+            ]
+        )
 
         predicted_increase = float(surge_model.predict(surge_features)[0])
         overload_probability = float(min(predicted_increase / 30.0, 1.0))
@@ -356,17 +392,15 @@ def analyze(data: dict):
                 "cardio_risk": round(cardio, 2),
                 "respiratory_risk": round(respiratory, 2),
                 "heat_risk": round(heat, 2),
-                "overall_health_score": overall_health
+                "overall_health_score": overall_health,
             },
-            "carbon_analysis": {
-                "annual_emission": round(carbon_value, 2)
-            },
+            "carbon_analysis": {"annual_emission": round(carbon_value, 2)},
             "surge_analysis": {
                 "predicted_ER_increase": round(predicted_increase, 2),
-                "overload_probability": round(overload_probability, 2)
+                "overload_probability": round(overload_probability, 2),
             },
             "alerts": alerts if alerts else ["Stable Condition"],
-            "final_prescription": prescription
+            "final_prescription": prescription,
         }
 
         latest_analysis = result
@@ -374,7 +408,8 @@ def analyze(data: dict):
 
     except Exception as e:
         return {"error": str(e)}
-    
+
+
 @app.get("/dashboard")
 def dashboard():
     if not latest_analysis:

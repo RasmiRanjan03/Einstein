@@ -20,6 +20,7 @@ const navItems = [
   { title: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
   { title: "Health Risk", path: "/health", icon: HeartPulse },
   { title: "Environment", path: "/environment", icon: TreePine },
+  { title: "Hospitals", path: "/hospital", icon: Building2 },
   { title: "Carbon Impact", path: "/carbon", icon: Footprints },
   { title: "Dustbin Locator", path: "/dustbin", icon: MapPin },
   { title: "Prescription", path: "/prescription", icon: Pill },
