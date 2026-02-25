@@ -8,7 +8,10 @@ import { v2 as cloudinary } from 'cloudinary';
 import dustbinRoutes from './routes/dustbin.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.route.js';
-import envRoutes from './routes/healthCarbonEnvironment.route.js';
+import aiRoutes from './routes/ai.routes.js';
+import carbon from './routes/carbon.routes.js';
+import healthRoute from './routes/health.routes.js';
+import hospitalRoute from './routes/hospital.routes.js';
 
 const app = express();
 
@@ -60,8 +63,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/dustbins', dustbinRoutes);
 app.use('/api/ai', aiRoutes);
-app.use("/api/environment", envRoutes);
-
+app.use('/api/carbon',carbon);
+app.use('/api/healths',healthRoute);
+app.use('/api/hospital',hospitalRoute);
 
 // ✅ 404 Handler
 app.use((req, res) => {
