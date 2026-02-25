@@ -163,7 +163,7 @@ const DustbinLocator = () => {
           hover={false}
         >
           <MapContainer
-            center={userLocation ? [userLocation.lat, userLocation.lng] : [20.132025, 85.596907]}
+            center={userLocation ? [userLocation.lat, userLocation.lng] : [20.133073999999997, 85.619011]}
             zoom={15}
             scrollWheelZoom={true}
             className="h-[400px] w-full rounded-xl z-0"

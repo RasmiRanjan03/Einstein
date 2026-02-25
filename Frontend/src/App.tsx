@@ -7,6 +7,7 @@ import Environment from "./pages/Environment";
 import CarbonFootprint from "./pages/CarbonFootprint";
 import DustbinLocator from "./pages/DustbinLocator";
 import Prescription from "./pages/Prescription";
+import HospitalLocator from "./pages/HospitalLocator"
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import SignupPage from "./pages/SignupPage";
@@ -26,6 +27,7 @@ const App = () => {
       <Route path="/dashboard" element={token ? <Dashboard /> : <Navigate to="/signin" />} />
       <Route path="/health" element={token ? <HealthRisk /> : <Navigate to="/signin" />} />
       <Route path="/environment" element={token ? <Environment /> : <Navigate to="/signin" />} />
+      <Route path="/hospital" element={token?<HospitalLocator />:<Navigate to="/signin" />} />
       <Route path="/carbon" element={token ? <CarbonFootprint /> : <Navigate to="/signin" />} />
       <Route path="/dustbin" element={token ? <DustbinLocator /> : <Navigate to="/signin" />} />
       <Route path="/prescription" element={token ? <Prescription /> : <Navigate to="/signin" />} />
